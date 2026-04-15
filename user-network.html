@@ -219,12 +219,19 @@
     }
 
     async function getCurrentUserByReferral(code) {
-      const normalized = code.trim();
+      const normalized = normalizeIdentifier(code);
       if (!normalized) return null;
 
-      let user = await fetchUserByField(fieldPaths.friendName, normalized);
+      let user = await fetchUserByField(fieldPaths.friendName, code);
       if (user) return user;
-      return await fetchUserByField(fieldPaths.referralCode, normalized);
+      user = await fetchUserByField(fieldPaths.referralCode, code);
+      if (user) return user;
+
+      const allUsers = await fetchAllUsers();
+      return allUsers.find(u =>
+        normalizeIdentifier(u.friendName) === normalized ||
+        normalizeIdentifier(u.referral) === normalized
+      ) || null;
     }
 
     async function fetchUserByField(fields, value) {
