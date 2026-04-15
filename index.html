@@ -99,8 +99,26 @@
       border-radius: 20px;
       font-weight: 600;
     }
-    .header-right { display: flex; align-items: center; gap: 12px; }
-    #admin-email { font-size: 13px; color: var(--muted); }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .header-status {
+      display: flex;
+      flex-direction: column;
+      text-align: right;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.3;
+    }
+    .header-status strong {
+      display: block;
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    #admin-email { display: none; }
+    .header-email {
+      font-size: 12px;
+      color: var(--muted);
+    }
     .btn-logout {
       background: transparent;
       border: 1px solid var(--border);
@@ -396,7 +414,10 @@
       <div class="header-badge">ADMIN</div>
     </div>
     <div class="header-right">
-      <span id="admin-email"></span>
+      <div class="header-status">
+        <strong id="login-status">Not signed in</strong>
+        <span id="admin-email" class="header-email"></span>
+      </div>
       <button class="btn-logout" onclick="signOut()">Sign Out</button>
     </div>
   </header>
@@ -669,6 +690,19 @@
     return AUTHORIZED_ADMIN_EMAILS.includes(email) || AUTHORIZED_ADMIN_UIDS.includes(uid);
   }
 
+  function setLoginStatus(text, subtext = '', color = 'var(--muted)') {
+    const statusEl = document.getElementById('login-status');
+    const emailEl = document.getElementById('admin-email');
+    if (statusEl) {
+      statusEl.textContent = text;
+      statusEl.style.color = color;
+    }
+    if (emailEl) {
+      emailEl.textContent = subtext;
+      emailEl.style.display = subtext ? 'block' : 'none';
+    }
+  }
+
   function showUnauthorizedMessage() {
     const errEl = document.getElementById('login-error');
     errEl.textContent = 'Access denied. This admin page is restricted to authorized users only.';
@@ -684,6 +718,7 @@
     if (user) {
       if (!isAuthorizedUser(user)) {
         showUnauthorizedMessage();
+        setLoginStatus('Unauthorized account', user.email || '', 'var(--red)');
         fbSignOut(auth);
         loginScreen.style.display = 'flex';
         appScreen.style.display = 'none';
@@ -693,12 +728,13 @@
       errEl.style.display = 'none';
       loginScreen.style.display = 'none';
       appScreen.style.display = 'block';
-      document.getElementById('admin-email').textContent = user.email;
+      setLoginStatus('Signed in', user.email || '', 'var(--green)');
       loadUsers();
     } else {
       errEl.style.display = 'none';
       loginScreen.style.display = 'flex';
       appScreen.style.display = 'none';
+      setLoginStatus('Not signed in', '', 'var(--muted)');
     }
   });
 
