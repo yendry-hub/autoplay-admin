@@ -54,6 +54,19 @@
     .network-card { background: #10142C; border: 1px solid var(--border); border-radius: 20px; padding: 22px; }
     .card-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; font-size: 15px; font-weight: 700; color: var(--text); }
     .card-title.small { font-size: 14px; font-weight: 600; color: var(--muted); }
+
+    .tab-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .tab-button { appearance: none; border: 1px solid var(--border); background: var(--surface2); color: var(--text); border-radius: 14px; padding: 12px 18px; cursor: pointer; transition: all 0.15s ease; }
+    .tab-button.active { background: linear-gradient(135deg, #8B5CF6, #6366F1); border-color: transparent; color: #fff; }
+
+    .announcement-card { background: linear-gradient(180deg, rgba(16,185,129,0.08), rgba(15,23,42,0.95)); border: 1px solid rgba(16,185,129,0.18); border-radius: 22px; padding: 24px; }
+    .announcement-card h3 { margin: 0 0 12px; font-size: 18px; }
+    .announcement-card p { margin: 0 0 18px; color: var(--muted); line-height: 1.75; }
+    .announcement-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+    .announcement-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 16px; }
+    .announcement-item strong { display: block; margin-bottom: 6px; }
+
+    #updates-content { display: none; }
     .network-row { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; display: grid; gap: 12px; }
     .network-entry { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; background: rgba(255,255,255,0.02); border-radius: 14px; }
     .network-entry strong { font-size: 14px; }
@@ -91,7 +104,13 @@
       <div class="brand-subtitle">Safe view only: no sensitive user or financial details shown.</div>
     </header>
 
-    <section class="panel">
+    <div class="tab-bar">
+      <button class="tab-button active" id="tab-network" type="button" onclick="switchTab('network')">Network</button>
+      <button class="tab-button" id="tab-announcements" type="button" onclick="switchTab('announcements')">Announcements</button>
+    </div>
+
+    <div id="network-content">
+      <section class="panel">
       <h2>Enter your username or referral code</h2>
       <p>Use your account username or referral code to load your network structure. This page only displays name and status for your upline and referrals.</p>
       <div class="input-row">
@@ -145,6 +164,17 @@
     </section>
   </div>
 
+  <section class="panel" id="updates-content">
+    <h2>Announcements</h2>
+    <p>Latest app update news and install guidance. Content is fetched from Firestore.</p>
+    <div class="announcement-card" id="announcement-container">
+      <h3 id="announcement-title-display">Loading announcement…</h3>
+      <p id="announcement-message-display">Please wait while we load the latest announcement.</p>
+      <div id="announcement-link-display" style="margin-top:16px"></div>
+      <div id="announcement-updated" style="margin-top:14px; color:var(--muted); font-size:13px"></div>
+    </div>
+  </section>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import {
@@ -153,6 +183,8 @@
       query,
       where,
       getDocs,
+      getDoc,
+      doc,
       limit
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -168,6 +200,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const COLLECTION = 'licenses';
+    const announcementDoc = doc(db, 'app_config', 'announcement');
     let allUsersCache = null;
 
     const fieldPaths = {
@@ -342,6 +375,45 @@
       return value.trim().toLowerCase();
     }
 
+    async function loadAnnouncement() {
+      const titleEl = document.getElementById('announcement-title-display');
+      const messageEl = document.getElementById('announcement-message-display');
+      const linkEl = document.getElementById('announcement-link-display');
+      const updatedEl = document.getElementById('announcement-updated');
+
+      try {
+        const snap = await getDoc(announcementDoc);
+        if (!snap.exists()) {
+          titleEl.textContent = 'No announcements yet.';
+          messageEl.textContent = 'The admin can publish app updates from the admin dashboard.';
+          linkEl.innerHTML = '';
+          updatedEl.textContent = '';
+          return;
+        }
+
+        const data = snap.data();
+        titleEl.textContent = data.title || 'App announcement';
+        messageEl.textContent = data.message || 'No announcement text has been provided.';
+        if (data.link) {
+          linkEl.innerHTML = `<a href="${escapeHtml(data.link)}" target="_blank" rel="noopener noreferrer">Open update link</a>`;
+        } else {
+          linkEl.innerHTML = '';
+        }
+        if (data.updatedAt && data.updatedAt.toDate) {
+          const updated = data.updatedAt.toDate();
+          updatedEl.textContent = `Last updated: ${updated.toLocaleDateString('id-ID')} ${updated.toLocaleTimeString('id-ID')}`;
+        } else {
+          updatedEl.textContent = '';
+        }
+      } catch (error) {
+        titleEl.textContent = 'Unable to load announcement.';
+        messageEl.textContent = error.message || 'Please try again later.';
+        linkEl.innerHTML = '';
+        updatedEl.textContent = '';
+        console.error(error);
+      }
+    }
+
     function mapUserDoc(docSnap) {
       const data = docSnap.data();
       const trialStart = getField(data, ['trialStart']);
@@ -487,6 +559,19 @@
       document.getElementById('downline-2-section').innerHTML = '';
     }
 
+    function switchTab(tab) {
+      const networkContent = document.getElementById('network-content');
+      const updatesContent = document.getElementById('updates-content');
+      const networkTab = document.getElementById('tab-network');
+      const announcementsTab = document.getElementById('tab-announcements');
+
+      const showNetwork = tab === 'network';
+      networkContent.style.display = showNetwork ? 'block' : 'none';
+      updatesContent.style.display = showNetwork ? 'none' : 'block';
+      networkTab.classList.toggle('active', showNetwork);
+      announcementsTab.classList.toggle('active', !showNetwork);
+    }
+
     function toggleSection(sectionId) {
       const section = document.getElementById(sectionId);
       if (!section) return;
@@ -505,6 +590,8 @@
         loadBtn.click();
       }
     });
+
+    loadAnnouncement();
   </script>
 </body>
 </html>

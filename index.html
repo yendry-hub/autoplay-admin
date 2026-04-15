@@ -430,6 +430,28 @@
       <button class="btn btn-primary" onclick="openAddModal()">+ Add Device</button>
     </div>
 
+    <section class="panel" id="announcement-editor">
+      <h2>App Announcement</h2>
+      <p>Write an announcement that will appear on the user-facing referral page.</p>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="announcement-title" placeholder="e.g. App update available" />
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea id="announcement-message" rows="4" placeholder="Write the announcement text here..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Link (optional)</label>
+        <input type="text" id="announcement-link" placeholder="https://example.com/download" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="loadAnnouncement()">Reload</button>
+        <button class="btn btn-primary" onclick="saveAnnouncement()">Save Announcement</button>
+      </div>
+      <div id="announcement-status" style="margin-top:12px; color:var(--muted);"></div>
+    </section>
+
     <!-- Table -->
     <div class="table-wrap">
       <div id="table-loading">Loading users...</div>
@@ -601,8 +623,10 @@
     getDocs,
     doc,
     setDoc,
+    getDoc,
     updateDoc,
-    deleteDoc
+    deleteDoc,
+    serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
   // ── Detect file:// protocol and warn user ───────────────────────
@@ -626,6 +650,7 @@
   const app  = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db   = getFirestore(app);
+  const announcementDocRef = doc(db, 'app_config', 'announcement');
 
   const AUTHORIZED_ADMIN_EMAILS = [
     'yendry.mikael@gmail.com'
@@ -712,6 +737,7 @@
       const snap = await getDocs(collection(db, 'licenses'));
       allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderTable();
+      await loadAnnouncement();
     } catch (e) {
       showToast('Error loading users: ' + e.message, 'error');
     }
@@ -1013,6 +1039,57 @@
     const level1Names = level1.map(u => normalizeFriendName(u.friendName)).filter(Boolean);
     const level2 = allUsers.filter(u => level1Names.includes(normalizeFriendName(u.referral)));
     return { level1, level2 };
+  }
+
+  window.saveAnnouncement = async () => {
+    const title = document.getElementById('announcement-title').value.trim();
+    const message = document.getElementById('announcement-message').value.trim();
+    const link = document.getElementById('announcement-link').value.trim();
+    const statusEl = document.getElementById('announcement-status');
+
+    if (!title && !message && !link) {
+      statusEl.textContent = 'Please enter at least a title, message, or link before saving.';
+      return;
+    }
+
+    try {
+      await setDoc(announcementDocRef, {
+        title,
+        message,
+        link: link || null,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      statusEl.textContent = 'Announcement saved successfully.';
+      showToast('Announcement saved!', 'success');
+    } catch (err) {
+      statusEl.textContent = 'Failed to save announcement: ' + err.message;
+      showToast('Error saving announcement: ' + err.message, 'error');
+    }
+  };
+
+  async function loadAnnouncement() {
+    const statusEl = document.getElementById('announcement-status');
+    if (!statusEl) return;
+    statusEl.textContent = 'Loading announcement...';
+
+    try {
+      const snap = await getDoc(announcementDocRef);
+      if (!snap.exists()) {
+        document.getElementById('announcement-title').value = '';
+        document.getElementById('announcement-message').value = '';
+        document.getElementById('announcement-link').value = '';
+        statusEl.textContent = 'No announcement has been configured yet.';
+        return;
+      }
+      const data = snap.data();
+      document.getElementById('announcement-title').value = data.title || '';
+      document.getElementById('announcement-message').value = data.message || '';
+      document.getElementById('announcement-link').value = data.link || '';
+      statusEl.textContent = 'Loaded announcement from Firestore.';
+    } catch (err) {
+      statusEl.textContent = 'Unable to load announcement: ' + err.message;
+      showToast('Error loading announcement: ' + err.message, 'error');
+    }
   }
 
   function getStatusInfo(user) {
