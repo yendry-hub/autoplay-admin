@@ -144,6 +144,17 @@
       flex-wrap: wrap;
     }
     .controls h2 { flex: 1; font-size: 18px; font-weight: 600; }
+    .search-input {
+      flex: 1 1 240px;
+      min-width: 220px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .search-input::placeholder { color: var(--muted); }
 
     .btn {
       padding: 10px 18px;
@@ -160,9 +171,47 @@
     .btn-success:hover { filter: brightness(1.1); }
     .btn-danger  { background: var(--red); color: #fff; }
     .btn-danger:hover { filter: brightness(1.1); }
+    .btn-referral { background: #262641; color: #fff; }
+    .btn-referral:hover { filter: brightness(1.05); }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
     .btn-outline:hover { border-color: var(--purple); color: var(--purple); }
     .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 7px; }
+
+    .referral-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .referral-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .referral-item {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .referral-item strong { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .referral-item span { display: block; font-size: 15px; font-weight: 600; color: var(--text); }
+    .referral-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .referral-status.green { background: rgba(16,185,129,0.14); color: #6ee7b7; }
+    .referral-status.amber { background: rgba(245,158,11,0.14); color: #facc15; }
+    .referral-status.red { background: rgba(239,68,68,0.14); color: #fca5a5; }
+    .referral-section { margin-top: 18px; }
+    .referral-section .section-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    .referral-list { list-style: none; padding: 0; margin: 0; }
+    .referral-list li { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding: 10px 0; font-size: 14px; }
+    .referral-list li:last-child { border-bottom: none; }
+    .referral-list .item-meta { display: flex; align-items: center; gap: 10px; }
+    .referral-toggle { cursor: pointer; color: var(--purple); font-size: 12px; font-weight: 700; }
 
     /* Table */
     .table-wrap {
@@ -359,6 +408,7 @@
     <!-- Controls -->
     <div class="controls">
       <h2>Users</h2>
+      <input type="text" id="user-search" class="search-input" placeholder="Search by name, referral, or device..." oninput="renderTable()" />
       <button class="btn btn-outline" onclick="refreshData()">🔄 Refresh</button>
       <button class="btn btn-primary" onclick="openAddModal()">+ Add Device</button>
     </div>
@@ -371,6 +421,9 @@
           <tr>
             <th>Friend Name</th>
             <th>Device ID</th>
+            <th>Bank Name</th>
+            <th>Bank Account</th>
+            <th>Referral</th>
             <th>Trial Start</th>
             <th>Days Left</th>
             <th>Status</th>
@@ -398,6 +451,14 @@
       <input type="text" id="edit-friendName" placeholder="e.g. John" />
     </div>
     <div class="form-group">
+      <label>Bank Name</label>
+      <input type="text" id="edit-bankName" placeholder="e.g. BCA" />
+    </div>
+    <div class="form-group">
+      <label>Bank Account</label>
+      <input type="text" id="edit-bankAccount" placeholder="e.g. 1234567890" />
+    </div>
+    <div class="form-group">
       <label>Subscription Status</label>
       <select id="edit-subscribed">
         <option value="false">❌ Not Subscribed</option>
@@ -407,6 +468,10 @@
     <div class="form-group">
       <label>Subscription Expiry Date (optional)</label>
       <input type="date" id="edit-expiryDate" />
+    </div>
+    <div class="form-group">
+      <label>Referral (optional)</label>
+      <input type="text" id="edit-referral" placeholder="Referral username" />
     </div>
     <div class="form-group">
       <label>Notes (private)</label>
@@ -432,12 +497,70 @@
       <input type="text" id="add-friendName" placeholder="e.g. Budi" />
     </div>
     <div class="form-group">
+      <label>Bank Name</label>
+      <input type="text" id="add-bankName" placeholder="e.g. BCA" />
+    </div>
+    <div class="form-group">
+      <label>Bank Account</label>
+      <input type="text" id="add-bankAccount" placeholder="e.g. 1234567890" />
+    </div>
+    <div class="form-group">
+      <label>Referral (optional)</label>
+      <input type="text" id="add-referral" placeholder="Referral username" />
+    </div>
+    <div class="form-group">
       <label>Notes</label>
       <textarea id="add-notes" rows="2" placeholder="Optional notes..."></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-add')">Cancel</button>
       <button class="btn btn-primary" onclick="addDevice()">Add Device</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── REFERRAL MODAL ─────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-referral">
+  <div class="modal">
+    <h3>🔗 Referral Structure</h3>
+    <div class="referral-card">
+      <div class="referral-item">
+        <strong>Current User</strong>
+        <span id="referral-current-name">-</span>
+      </div>
+      <div class="referral-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <strong style="margin:0">Total Downline</strong>
+        <span id="referral-total-count">0</span>
+      </div>
+      <div class="referral-item" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <strong style="margin:0">Estimated Monthly Income</strong>
+        <span id="referral-income">Rp 0</span>
+      </div>
+    </div>
+
+    <div class="referral-section">
+      <div class="section-title"><span>↑ Upline</span><span class="referral-toggle" onclick="toggleSection('referral-upline-body')">Toggle</span></div>
+      <div id="referral-upline-body">
+        <div id="referral-up-line"></div>
+      </div>
+    </div>
+
+    <div class="referral-section">
+      <div class="section-title"><span>↓ Downline Level 1</span><span class="referral-toggle" onclick="toggleSection('referral-downline-1-body')">Toggle</span></div>
+      <div id="referral-downline-1-body">
+        <ul id="referral-downline-1" class="referral-list"></ul>
+      </div>
+    </div>
+
+    <div class="referral-section">
+      <div class="section-title"><span>↓ Downline Level 2</span><span class="referral-toggle" onclick="toggleSection('referral-downline-2-body')">Toggle</span></div>
+      <div id="referral-downline-2-body">
+        <ul id="referral-downline-2" class="referral-list"></ul>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-referral')">Close</button>
     </div>
   </div>
 </div>
@@ -581,17 +704,33 @@
     const tbody = document.getElementById('users-tbody');
     document.getElementById('table-loading').style.display = 'none';
 
-    if (allUsers.length === 0) {
+    const searchValue = document.getElementById('user-search')?.value.trim().toLowerCase() || '';
+    const usersToShow = searchValue
+      ? allUsers.filter(user => {
+          const friendName = String(user.friendName || '').toLowerCase();
+          const referral = String(user.referral || '').toLowerCase();
+          const deviceId = String(user.deviceId || user.id || '').toLowerCase();
+          const notes = String(user.notes || '').toLowerCase();
+          return friendName.includes(searchValue)
+            || referral.includes(searchValue)
+            || deviceId.includes(searchValue)
+            || notes.includes(searchValue);
+        })
+      : allUsers;
+
+    if (usersToShow.length === 0) {
       document.getElementById('empty-state').style.display = 'block';
-      updateStats([]);
+      updateStats(usersToShow);
+      document.getElementById('users-table').style.display = 'none';
       return;
     }
 
+    document.getElementById('empty-state').style.display = 'none';
     document.getElementById('users-table').style.display = 'table';
     tbody.innerHTML = '';
-    updateStats(allUsers);
+    updateStats(usersToShow);
 
-    allUsers.forEach(user => {
+    usersToShow.forEach(user => {
       const trialStart = user.trialStart?.toDate ? user.trialStart.toDate() : new Date(user.trialStart || Date.now());
       const lastSeen   = user.lastSeen?.toDate   ? user.lastSeen.toDate()   : null;
       const expiryDate = user.expiryDate?.toDate  ? user.expiryDate.toDate() : null;
@@ -629,11 +768,15 @@
           ${user.notes ? `<br><small style="color:var(--muted)">${escHtml(user.notes)}</small>` : ''}
         </td>
         <td><span class="device-id">${escHtml(user.deviceId || user.id)}</span></td>
+        <td>${escHtml(user.bankName || '')}</td>
+        <td>${escHtml(user.bankAccount || '')}</td>
+        <td>${escHtml(user.referral || '')}</td>
         <td>${trialStart.toLocaleDateString('id-ID')}</td>
         <td>${daysText}</td>
         <td>${badge}</td>
         <td>${lastSeen ? lastSeen.toLocaleDateString('id-ID') : '—'}</td>
         <td>
+          <button class="btn btn-referral btn-sm" onclick="openReferralModal('${user.id}')">Referral</button>
           <button class="btn btn-outline btn-sm" onclick="openEditModal('${user.id}')">✏️ Edit</button>
           ${isActiveSubscription
             ? `<button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="revokeSubscription('${user.id}')">Revoke</button>`
@@ -715,6 +858,9 @@
     if (!user) return;
     document.getElementById('edit-deviceId').value    = deviceId;
     document.getElementById('edit-friendName').value  = user.friendName || '';
+    document.getElementById('edit-bankName').value    = user.bankName || '';
+    document.getElementById('edit-bankAccount').value = user.bankAccount || '';
+    document.getElementById('edit-referral').value    = user.referral || '';
     document.getElementById('edit-subscribed').value  = user.subscribed ? 'true' : 'false';
     document.getElementById('edit-notes').value       = user.notes || '';
     const expiry = user.expiryDate?.toDate ? user.expiryDate.toDate() : null;
@@ -725,6 +871,9 @@
   window.saveEdit = async () => {
     const deviceId   = document.getElementById('edit-deviceId').value;
     const friendName = document.getElementById('edit-friendName').value.trim();
+    const bankName   = document.getElementById('edit-bankName').value.trim();
+    const bankAccount = document.getElementById('edit-bankAccount').value.trim();
+    const referral   = document.getElementById('edit-referral').value.trim();
     const subscribed = document.getElementById('edit-subscribed').value === 'true';
     const notes      = document.getElementById('edit-notes').value.trim();
     const expiryStr  = document.getElementById('edit-expiryDate').value;
@@ -741,7 +890,7 @@
 
     try {
       await updateDoc(doc(db, 'licenses', deviceId), {
-        friendName, subscribed, notes, expiryDate: expiryDate ?? null
+        friendName, bankName, bankAccount, referral, subscribed, notes, expiryDate: expiryDate ?? null
       });
       showToast('✅ Saved!', 'success');
       closeModal('modal-edit');
@@ -753,14 +902,20 @@
   window.openAddModal = () => {
     document.getElementById('add-deviceId').value   = '';
     document.getElementById('add-friendName').value = '';
+    document.getElementById('add-bankName').value = '';
+    document.getElementById('add-bankAccount').value = '';
+    document.getElementById('add-referral').value = '';
     document.getElementById('add-notes').value      = '';
     openModal('modal-add');
   };
 
   window.addDevice = async () => {
-    const deviceId   = document.getElementById('add-deviceId').value.trim();
-    const friendName = document.getElementById('add-friendName').value.trim();
-    const notes      = document.getElementById('add-notes').value.trim();
+    const deviceId    = document.getElementById('add-deviceId').value.trim();
+    const friendName  = document.getElementById('add-friendName').value.trim();
+    const bankName    = document.getElementById('add-bankName').value.trim();
+    const bankAccount = document.getElementById('add-bankAccount').value.trim();
+    const referral    = document.getElementById('add-referral').value.trim();
+    const notes       = document.getElementById('add-notes').value.trim();
     if (!deviceId) {
       showToast('Device ID is required.', 'error');
       return;
@@ -775,7 +930,7 @@
     }
     try {
       await setDoc(doc(db, 'licenses', deviceId), {
-        deviceId, friendName,
+        deviceId, friendName, bankName, bankAccount, referral,
         trialStart: new Date(), subscribed: false,
         expiryDate: null, notes, lastSeen: null
       });
@@ -788,6 +943,112 @@
   // ── Helpers ──────────────────────────────────────────────────────
   window.openModal  = id => document.getElementById(id).classList.add('show');
   window.closeModal = id => document.getElementById(id).classList.remove('show');
+
+  window.openReferralModal = async (deviceId) => {
+    try {
+      const referralData = await getReferralData(deviceId);
+      renderReferralModal(referralData);
+      openModal('modal-referral');
+    } catch (e) {
+      showToast('Error loading referrals: ' + e.message, 'error');
+    }
+  };
+
+  async function getReferralData(deviceId) {
+    const user = allUsers.find(u => u.id === deviceId);
+    if (!user) throw new Error('User not found');
+
+    const currentName = String(user.friendName || user.deviceId || '').trim();
+    const currentStatus = getStatusInfo(user);
+    const upline = getUpline(user, 2);
+    const { level1: downlineLevel1, level2: downlineLevel2 } = getDownline(user);
+
+    return {
+      user,
+      currentName,
+      currentStatus,
+      upline,
+      downlineLevel1,
+      downlineLevel2
+    };
+  }
+
+  function getUpline(user, maxLevel = 2) {
+    const result = [];
+    let currentReferral = normalizeFriendName(user.referral || '');
+    for (let level = 1; level <= maxLevel; level++) {
+      if (!currentReferral) break;
+      const found = allUsers.find(u => normalizeFriendName(u.friendName) === currentReferral);
+      if (!found) break;
+      result.push(found);
+      currentReferral = normalizeFriendName(found.referral || '');
+    }
+    return result;
+  }
+
+  function getDownline(user, maxLevel = 2) {
+    const sourceName = normalizeFriendName(user.friendName);
+    const level1 = allUsers.filter(u => normalizeFriendName(u.referral) === sourceName);
+    if (maxLevel < 2 || level1.length === 0) {
+      return { level1, level2: [] };
+    }
+
+    const level1Names = level1.map(u => normalizeFriendName(u.friendName)).filter(Boolean);
+    const level2 = allUsers.filter(u => level1Names.includes(normalizeFriendName(u.referral)));
+    return { level1, level2 };
+  }
+
+  function getStatusInfo(user) {
+    const now = new Date();
+    const expiry = user.expiryDate?.toDate ? user.expiryDate.toDate() : user.expiryDate ? new Date(user.expiryDate) : null;
+    const trialStart = user.trialStart?.toDate ? user.trialStart.toDate() : user.trialStart ? new Date(user.trialStart) : null;
+
+    if (user.subscribed && expiry && expiry > now) {
+      return { label: 'Subscribed', badge: 'green' };
+    }
+    if (trialStart && (trialStart.getTime() + 3 * 86400000) > now.getTime()) {
+      return { label: 'Trial', badge: 'amber' };
+    }
+    return { label: 'Expired', badge: 'red' };
+  }
+
+  function renderReferralModal(data) {
+    const uplineRows = [
+      { level: 2, user: data.upline[1] },
+      { level: 1, user: data.upline[0] }
+    ];
+    const downline1 = data.downlineLevel1 || [];
+    const downline2 = data.downlineLevel2 || [];
+    const totalDownline = downline1.length + downline2.length;
+    const estimatedIncome = downline1.length * 5000 + downline2.length * 2000;
+
+    document.getElementById('referral-current-name').textContent = data.currentName;
+    document.getElementById('referral-up-line').innerHTML = uplineRows.map(row => {
+      if (!row.user) return '';
+      const status = getStatusInfo(row.user);
+      return `<div class="referral-item"><strong>Level ${row.level}</strong><span>${escHtml(row.user.friendName || row.user.deviceId)} <span class="referral-status ${status.badge}">${status.label}</span></span></div>`;
+    }).join('') || '<div class="referral-item"><strong>No upline found</strong><span>—</span></div>';
+
+    document.getElementById('referral-downline-1').innerHTML = downline1.length > 0
+      ? downline1.map(user => {
+          const status = getStatusInfo(user);
+          return `<li><div class="item-meta"><span>↳ ${escHtml(user.friendName || user.deviceId)}</span></div><span class="referral-status ${status.badge}">${status.label}</span></li>`;
+        }).join('')
+      : '<li><span style="color:var(--muted)">No direct referrals</span></li>';
+
+    document.getElementById('referral-downline-2').innerHTML = downline2.length > 0
+      ? downline2.map(user => `<li><div class="item-meta"><span>↳ ${escHtml(user.friendName || user.deviceId)}</span></div></li>`).join('')
+      : '<li><span style="color:var(--muted)">No indirect referrals</span></li>';
+
+    document.getElementById('referral-total-count').textContent = totalDownline;
+    document.getElementById('referral-income').textContent = `Rp ${estimatedIncome.toLocaleString('id-ID')}`;
+  }
+
+  function toggleSection(sectionId) {
+    const element = document.getElementById(sectionId);
+    if (!element) return;
+    element.style.display = element.style.display === 'none' ? 'block' : 'none';
+  }
 
   document.querySelectorAll('.modal-overlay').forEach(el => {
     el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
